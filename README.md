@@ -1,0 +1,2 @@
+# Embedded_System_Smartwatch
+2026年嵌入式系统与设计课程设计作业
