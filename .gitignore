@@ -1,0 +1,31 @@
+### Gradle ###
+.gradle
+/build/
+
+### 忽略 build 产物 ###
+**/build/
+**/outputs/
+
+### Android Studio ###
+*.iml
+.idea/
+captures/
+.externalNativeBuild
+.cxx
+local.properties
+
+### macOS 系统文件 ###
+.DS_Store
+
+### Windows 系统文件 ###
+Thumbs.db
+
+### Kotlin 编译器缓存 ###
+.kotlin/
+
+### APK/签名文件（可选 - 安全起见不建议提交 keystore） ###
+*.keystore
+!release.keystore
+
+### 临时文件 ###
+*.log
