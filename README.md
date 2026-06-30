@@ -23,8 +23,8 @@
 
 | 版本 | 类型 | 下载 | 说明 |
 |------|------|------|------|
-| v1.0 | Release | [点击下载](https://github.com/browerbayersong/Embedded_System_Smartwatch/releases/latest/download/app-release.apk) | 推荐安装，体积更小 |
-| v1.0 | Debug | [点击下载](https://github.com/browerbayersong/Embedded_System_Smartwatch/releases/latest/download/app-debug.apk) | 调试版本，包含详细日志 |
+| v1.0 | Release | [点击下载](https://github.com/browerbayersong/Embedded_System_Smartwatch/releases/app-release.apk) | 推荐安装，体积更小 |
+| v1.0 | Debug | [点击下载](https://github.com/browerbayersong/Embedded_System_Smartwatch/releases/app-debug.apk) | 调试版本，包含详细日志 |
 
 
 ### 所有历史版本
