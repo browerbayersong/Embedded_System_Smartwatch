@@ -17,21 +17,6 @@
 
 ---
 
-## ⬇️ 下载 APK
-
-### 最新版本
-
-| 版本 | 类型 | 下载 | 说明 |
-|------|------|------|------|
-| v1.0 | Release | [点击下载](https://github.com/browerbayersong/Embedded_System_Smartwatch/releases/latest/download/app-release.apk) | 推荐安装，体积更小 |
-| v1.0 | Debug | [点击下载](https://github.com/browerbayersong/Embedded_System_Smartwatch/releases/latest/download/app-debug.apk) | 调试版本，包含详细日志 |
-
-> **提示**：如果 Releases 中还没有文件，请先参考下方「构建 APK」的说明自行编译，或者等待作者在 GitHub Releases 页面发布。
-
-### 所有历史版本
-
-👉 访问 [GitHub Releases 页面](https://github.com/browerbayersong/Embedded_System_Smartwatch/releases)
-
 ### 安装步骤
 
 1. **下载** `.apk` 文件到手机（浏览器/微信/QQ 传文件都可以）
@@ -88,53 +73,6 @@ Embedded_System_Smartwatch/
 | ETX | 1 | 帧尾固定 `0x03` |
 
 协议实现在 `Android_app/app/src/main/java/com/example/smartwatch/BtProtocol.kt` 中。
-
----
-
-## 🛠️ 构建 APK（开发者）
-
-### 环境要求
-
-| 项目 | 版本 |
-|------|------|
-| Android Studio | 2024.x 或更高 |
-| Gradle | 9.4.1（项目自带 Wrapper） |
-| Android Gradle Plugin | 9.2.1 |
-| Kotlin | 2.3.0（通过 Compose Plugin） |
-| JDK | 17 或更高（Android Studio 自带即可） |
-| Min SDK | 34 (Android 14) |
-| Target SDK | 36 (Android 14+) |
-
-### 方式一：在 Android Studio 中构建
-
-1. 用 Android Studio 打开 `Android_app/` 目录
-2. 等待 Gradle Sync 完成
-3. 顶部菜单 → **Build** → **Build Bundle(s) / APK(s)** → **Build APK(s)**
-4. 构建成功后在 `Android_app/app/build/outputs/apk/` 目录下找到 `app-debug.apk`
-
-**打包 Release 版（有签名）**：
-1. 顶部菜单 → **Build** → **Generate Signed Bundle / APK**
-2. 选择 **APK** → 新建或选择 keystore
-3. 选择 **release** → Finish
-4. 输出在 `Android_app/app/release/app-release.apk`
-
-### 方式二：命令行构建
-
-```bash
-cd Android_app
-
-# Windows (PowerShell / CMD)
-gradlew.bat assembleDebug     # Debug 版
-gradlew.bat assembleRelease   # Release 版
-
-# macOS / Linux
-./gradlew assembleDebug
-./gradlew assembleRelease
-```
-
-APK 输出路径：
-- Debug: `Android_app/app/build/outputs/apk/debug/app-debug.apk`
-- Release: `Android_app/app/build/outputs/apk/release/app-release.apk`
 
 ---
 

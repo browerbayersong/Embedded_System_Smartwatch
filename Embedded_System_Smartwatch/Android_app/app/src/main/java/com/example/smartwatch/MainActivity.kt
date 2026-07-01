@@ -3,6 +3,7 @@
 import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.content.Context
+import android.content.SharedPreferences
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
@@ -83,8 +84,8 @@ class MainActivity : ComponentActivity() {
             val connectedDevice = remember { mutableStateOf<BluetoothDevice?>(null) }
 
             val permissionState = remember { mutableStateOf(false) }
-            val darkTheme = remember { mutableStateOf(true) }
-            val primaryColor = remember { mutableStateOf(Color(0xFF4CAF50)) }
+            val darkTheme = remember { mutableStateOf(loadDarkTheme(context)) }
+            val primaryColor = remember { mutableStateOf(intToColor(loadPrimaryColor(context))) }
             val currentPage = remember { mutableStateOf(0) }
 
             val permissionLauncher = rememberLauncherForActivityResult(RequestMultiplePermissions()) { grantResults ->
@@ -130,9 +131,9 @@ class MainActivity : ComponentActivity() {
                         connectedDevice = connectedDevice,
                         permissionState = permissionState.value,
                         darkTheme = darkTheme.value,
-                        onDarkThemeChange = { darkTheme.value = it },
+                        onDarkThemeChange = { darkTheme.value = it; saveDarkTheme(context, it) },
                         primaryColor = primaryColor.value,
-                        onPrimaryColorChange = { primaryColor.value = it },
+                        onPrimaryColorChange = { primaryColor.value = it; savePrimaryColor(context, colorToInt(it)) },
                         context = context
                     )
                 }
@@ -632,3 +633,44 @@ fun exportLogs(context: Context, logLines: SnapshotStateList<String>) {
 }
 
 private fun Float.format(digits: Int) = String.format("%.${digits}f", this)
+
+// ==================== 主题设置持久化 ====================
+private const val PREFS_NAME = "smartwatch_settings"
+private const val KEY_DARK_THEME = "dark_theme"
+private const val KEY_PRIMARY_COLOR = "primary_color"
+
+private fun getPrefs(context: Context): SharedPreferences {
+    return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+}
+
+fun loadDarkTheme(context: Context): Boolean {
+    return getPrefs(context).getBoolean(KEY_DARK_THEME, true)
+}
+
+fun loadPrimaryColor(context: Context): Int {
+    return getPrefs(context).getInt(KEY_PRIMARY_COLOR, (0xFF4CAF50L).toInt())
+}
+
+fun saveDarkTheme(context: Context, value: Boolean) {
+    getPrefs(context).edit().putBoolean(KEY_DARK_THEME, value).apply()
+}
+
+fun savePrimaryColor(context: Context, color: Int) {
+    getPrefs(context).edit().putInt(KEY_PRIMARY_COLOR, color).apply()
+}
+
+fun colorToInt(color: Color): Int {
+    val a = ((color.alpha * 255f).toInt() and 0xFF)
+    val r = ((color.red * 255f).toInt() and 0xFF)
+    val g = ((color.green * 255f).toInt() and 0xFF)
+    val b = ((color.blue * 255f).toInt() and 0xFF)
+    return (a shl 24) or (r shl 16) or (g shl 8) or b
+}
+
+fun intToColor(value: Int): Color {
+    val a = ((value shr 24) and 0xFF).toFloat() / 255f
+    val r = ((value shr 16) and 0xFF).toFloat() / 255f
+    val g = ((value shr 8) and 0xFF).toFloat() / 255f
+    val b = (value and 0xFF).toFloat() / 255f
+    return Color(red = r, green = g, blue = b, alpha = a)
+}
