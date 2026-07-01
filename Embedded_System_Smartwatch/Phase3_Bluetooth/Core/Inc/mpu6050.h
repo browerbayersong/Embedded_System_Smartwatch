@@ -60,6 +60,9 @@ float MPU6050_ReadTemp(void);
 /* Calculate pitch and roll from accelerometer data */
 void MPU6050_CalcAngle(MPU6050_Accel_t *accel, MPU6050_Angle_t *angle);
 
+/* Read raw accelerometer data (int16_t LSB values, for pedometer), returns 0 on success */
+int MPU6050_ReadRawAccel(int16_t raw[3]);
+
 /* Read WHO_AM_I register */
 uint8_t MPU6050_WhoAmI(void);
 

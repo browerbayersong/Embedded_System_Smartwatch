@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usart.h"
+#include "tim.h"
+#include "soft_rtc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -241,6 +243,37 @@ void USART2_IRQHandler(void)
   /* USER CODE BEGIN USART2_IRQn 1 */
 
   /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM2 global interrupt (1Hz RTC tick).
+  */
+void TIM2_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM2_IRQn 0 */
+  if (__HAL_TIM_GET_FLAG(&htim2, TIM_FLAG_UPDATE) != RESET) {
+      if (__HAL_TIM_GET_IT_SOURCE(&htim2, TIM_IT_UPDATE) != RESET) {
+          __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE);
+          /* 1Hz tick: increment soft RTC */
+          rtc_time.sec++;
+          if (rtc_time.sec >= 60) {
+              rtc_time.sec = 0;
+              rtc_time.min++;
+              if (rtc_time.min >= 60) {
+                  rtc_time.min = 0;
+                  rtc_time.hour++;
+                  if (rtc_time.hour >= 24) {
+                      rtc_time.hour = 0;
+                  }
+              }
+          }
+      }
+  }
+  /* USER CODE END TIM2_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim2);
+  /* USER CODE BEGIN TIM2_IRQn 1 */
+
+  /* USER CODE END TIM2_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

@@ -1,5 +1,6 @@
 #include "smartwatch_ui.h"
 #include "oled.h"
+#include "soft_rtc.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -33,13 +34,13 @@ static void format_signed_int(char *buf, size_t size, float value) {
 /* ==================== Data Init ==================== */
 
 void UI_InitData(SmartWatchData_t *data) {
-    data->hour = 10;
-    data->minute = 30;
-    data->second = 45;
+    data->hour = rtc_time.hour;
+    data->minute = rtc_time.min;
+    data->second = rtc_time.sec;
     data->year = 2026;
-    data->month = 6;
-    data->day = 27;
-    data->weekday = 6;       /* Saturday */
+    data->month = 7;
+    data->day = 2;
+    data->weekday = 4;       /* Thursday */
     data->battery_pct = 85;
     data->temp_celsius = 25;
     data->imu_status = 0;
@@ -52,6 +53,9 @@ void UI_InitData(SmartWatchData_t *data) {
     data->gyro.gz = 0.0f;
     data->angle.pitch = 0.0f;
     data->angle.roll = 0.0f;
+    data->step_count = 0;
+    data->distance_m = 0.0f;
+    data->calories = 0.0f;
 }
 
 /* ==================== Status Bar ==================== */
@@ -292,7 +296,27 @@ void UI_DrawPage(UIPage_t page, SmartWatchData_t *data) {
         case PAGE_IMU:         UI_DrawIMU(data);          break;
         case PAGE_BLUETOOTH:   UI_DrawBluetooth(data);    break;
         case PAGE_DEVICE_INFO: UI_DrawDeviceInfo(data);   break;
+        case PAGE_ACTIVITY:    {
+            /* Activity page - 画在 PAGE_DEVICE_INFO 之后 */
+            OLED_ClearBuffer();
+            UI_DrawStatusBar(data);
+            OLED_DrawString8x16(4, 1, "ACTIVITY");
+
+            for (uint8_t x = 0; x < SSD1306_WIDTH; x++)
+                OLED_SetPixel(x, 24, 1);
+
+            char line[22];
+            snprintf(line, sizeof(line), "Steps: %lu", (unsigned long)data->step_count);
+            OLED_DrawString6x8(4, 3, line);
+            snprintf(line, sizeof(line), "Dist: %.1f m", data->distance_m);
+            OLED_DrawString6x8(4, 4, line);
+            snprintf(line, sizeof(line), "Cal: %.1f kcal", data->calories);
+            OLED_DrawString6x8(4, 5, line);
+
+            UI_DrawPageIndicator(PAGE_ACTIVITY, PAGE_MAX);
+            OLED_Update();
+        } break;
         default: break;
     }
-    OLED_Update();
+    if (page != PAGE_ACTIVITY) OLED_Update();
 }

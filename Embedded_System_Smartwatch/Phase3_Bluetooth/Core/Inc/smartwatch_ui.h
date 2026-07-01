@@ -11,6 +11,7 @@ typedef enum {
     PAGE_IMU,
     PAGE_BLUETOOTH,
     PAGE_DEVICE_INFO,
+    PAGE_ACTIVITY,
     PAGE_MAX
 } UIPage_t;
 

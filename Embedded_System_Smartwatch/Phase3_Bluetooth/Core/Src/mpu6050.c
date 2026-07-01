@@ -104,6 +104,17 @@ int MPU6050_ReadAccel(MPU6050_Accel_t *accel) {
     return 0;
 }
 
+int MPU6050_ReadRawAccel(int16_t raw[3]) {
+    uint8_t buf[6];
+    if (MPU6050_ReadRegs(MPU6050_REG_ACCEL_XOUT_H, buf, 6) != 0) {
+        return -1;
+    }
+    raw[0] = (int16_t)((buf[0] << 8) | buf[1]);
+    raw[1] = (int16_t)((buf[2] << 8) | buf[3]);
+    raw[2] = (int16_t)((buf[4] << 8) | buf[5]);
+    return 0;
+}
+
 int MPU6050_ReadGyro(MPU6050_Gyro_t *gyro) {
     uint8_t raw[6];
     if (MPU6050_ReadRegs(MPU6050_REG_GYRO_XOUT_H, raw, 6) != 0) {
