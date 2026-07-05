@@ -136,9 +136,11 @@ void UI_DrawWatchFace(SmartWatchData_t *data) {
 
     UI_DrawStatusBar(data);
 
-    /* Large time display */
+    /* Large time display - y=16 is page-aligned (bit_shift=0),
+       avoiding the non-aligned rendering bug in OLED_DrawDigit16x24.
+       24px tall font occupies pages 2-4 (y=16..39). */
     uint8_t time_x = (128 - 88) / 2;
-    OLED_DrawTime16x24(time_x, 14, data->hour, data->minute);
+    OLED_DrawTime16x24(time_x, 16, data->hour, data->minute);
 
     /* Date line: page 5 */
     char date_str[32];

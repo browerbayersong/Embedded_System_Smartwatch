@@ -397,7 +397,7 @@ fun ConnectionPage(
             Button(
                 onClick = {
                     if (permissionState) {
-                        logLines.add("开始扫描 BLE 设备")
+                        logLines.add("开始扫描经典蓝牙设备")
                         bleManager.startScan(
                             onDeviceFound = { device ->
                                 if (!deviceList.any { it.address == device.address }) {

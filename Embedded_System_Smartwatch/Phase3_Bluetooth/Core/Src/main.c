@@ -57,6 +57,10 @@ SmartWatchData_t watch_data;
 PedometerState pedo_state;
 UIPage_t current_page;
 uint32_t last_ui_tick = 0;
+
+/* 旋转编码器: 中断里改, main loop 里消费 */
+volatile int32_t encoder_delta = 0;
+volatile uint32_t encoder_sw_pressed = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -204,10 +208,43 @@ int main(void)
     /* 4) 读取 HC-05 STATE 引脚 */
     watch_data.bt_connected = BT_IsConnected();
 
-    /* 5) 页面自动切换（每 3 秒换一页，或者按键触发） */
-    if (now - last_ui_tick >= 3000) {
-        current_page = (UIPage_t)((current_page + 1) % PAGE_MAX);
-        last_ui_tick = now;
+    /* 5) 编码器控制页面切换（取代自动滚动） */
+    {
+        /* 5a) 旋转: 顺时针=下一页, 逆时针=上一页
+           编码器每一格产生多个中断 tick, 用阈值/4 来消抖 */
+        static const int32_t ENCODER_TICK_PER_STEP = 4;
+        int32_t local_delta = 0;
+
+        /* 原子读取中断累积值 */
+        __disable_irq();
+        if (encoder_delta >= ENCODER_TICK_PER_STEP) {
+            local_delta = encoder_delta / ENCODER_TICK_PER_STEP;
+            encoder_delta -= local_delta * ENCODER_TICK_PER_STEP;
+        } else if (encoder_delta <= -ENCODER_TICK_PER_STEP) {
+            local_delta = encoder_delta / ENCODER_TICK_PER_STEP;
+            encoder_delta -= local_delta * ENCODER_TICK_PER_STEP;
+        }
+        __enable_irq();
+
+        if (local_delta != 0) {
+            int page = (int)current_page + local_delta;
+            /* 环形取模，处理负数 */
+            page = page % (int)PAGE_MAX;
+            if (page < 0) page += PAGE_MAX;
+            current_page = (UIPage_t)page;
+            /* 立即刷新一次 */
+            UI_DrawPage(current_page, &watch_data);
+        }
+
+        /* 5b) 按键: 当前定义为"重置计步器"，在 Activity 页生效 */
+        if (encoder_sw_pressed) {
+            encoder_sw_pressed = 0;
+            Pedometer_Init(&pedo_state);
+            /* 立即刷新 Activity 页 */
+            if (current_page == PAGE_ACTIVITY) {
+                UI_DrawPage(current_page, &watch_data);
+            }
+        }
     }
 
     /* 6) UI 刷新（每 500ms） */

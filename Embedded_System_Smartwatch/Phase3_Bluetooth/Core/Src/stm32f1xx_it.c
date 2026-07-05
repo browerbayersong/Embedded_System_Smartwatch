@@ -246,8 +246,54 @@ void USART2_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles TIM2 global interrupt (1Hz RTC tick).
+ * @brief This function handles EXTI line[9:5] (rotary encoder: PA6 CLK, PB13 SW).
+ */
+void EXTI9_5_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI9_5_IRQn 0 */
+
+  /* --- PA6 (CLK, 编码器A相): 判断旋转方向 ---
+     PA6 触发时读 PA7 (DT, B相):
+       CLK 高, DT 低 → 顺时针 (CW)
+       CLK 低, DT 高 → 顺时针 (CW)
+       CLK 高, DT 高 → 逆时针 (CCW)
+       CLK 低, DT 低 → 逆时针 (CCW)
+     简化: CLK == DT 时为 CCW, 否则 CW
   */
+  if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_6) != RESET) {
+      __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_6);
+
+      GPIO_PinState clk_state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6);
+      GPIO_PinState dt_state  = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7);
+
+      /* 简易方向判断，外部变量在 main.c 里定义 */
+      extern volatile int32_t encoder_delta;
+      extern volatile uint32_t encoder_sw_pressed;
+
+      if (clk_state != dt_state) {
+          encoder_delta++;   /* 顺时针: 下一页 */
+      } else {
+          encoder_delta--;   /* 逆时针: 上一页 */
+      }
+  }
+
+  /* --- PB13 (SW, 按键): 按下触发，标记为按键事件 --- */
+  if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_13) != RESET) {
+      __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_13);
+
+      extern volatile uint32_t encoder_sw_pressed;
+      encoder_sw_pressed = 1;
+  }
+
+  /* USER CODE END EXTI9_5_IRQn 0 */
+  /* USER CODE BEGIN EXTI9_5_IRQn 1 */
+
+  /* USER CODE END EXTI9_5_IRQn 1 */
+}
+
+/**
+ * @brief This function handles TIM2 global interrupt (1Hz RTC tick).
+ */
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
