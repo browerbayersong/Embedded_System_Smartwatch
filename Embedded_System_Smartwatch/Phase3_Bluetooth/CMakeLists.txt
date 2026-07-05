@@ -48,6 +48,10 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Core/Src/mpu6050.c
     Core/Src/bluetooth.c
     Core/Src/smartwatch_ui.c
+    Core/Src/tim.c
+    Core/Src/i2c_drv.c
+    Core/Src/pedometer.c
+    Core/Src/soft_rtc.c
 )
 
 # Add include paths

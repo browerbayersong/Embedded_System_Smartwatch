@@ -8,7 +8,7 @@
 static const char *weekdays_en[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
 
 static void format_signed_fixed1(char *buf, size_t size, float value) {
-    int32_t scaled = (int32_t)(value * 10.0f + (value >= 0.0f ? 0.5f : -0.5f));
+    int scaled = (int)(value * 10.0f + (value >= 0.0f ? 0.5f : -0.5f));
     char sign = '+';
 
     if (scaled < 0) {
@@ -16,11 +16,11 @@ static void format_signed_fixed1(char *buf, size_t size, float value) {
         scaled = -scaled;
     }
 
-    snprintf(buf, size, "%c%ld.%ld", sign, (long)(scaled / 10), (long)(scaled % 10));
+    snprintf(buf, size, "%c%d.%d", sign, scaled / 10, scaled % 10);
 }
 
 static void format_signed_int(char *buf, size_t size, float value) {
-    int32_t rounded = (int32_t)(value + (value >= 0.0f ? 0.5f : -0.5f));
+    int rounded = (int)(value + (value >= 0.0f ? 0.5f : -0.5f));
     char sign = '+';
 
     if (rounded < 0) {
@@ -28,7 +28,7 @@ static void format_signed_int(char *buf, size_t size, float value) {
         rounded = -rounded;
     }
 
-    snprintf(buf, size, "%c%ld", sign, (long)rounded);
+    snprintf(buf, size, "%c%d", sign, rounded);
 }
 
 /* ==================== Data Init ==================== */
@@ -152,7 +152,7 @@ void UI_DrawWatchFace(SmartWatchData_t *data) {
     /* IMU quick status: page 6 */
     char imu_str[32];
     if (data->imu_status) {
-        char pitch[8], roll[8];
+        char pitch[16], roll[16];
         format_signed_int(pitch, sizeof(pitch), data->angle.pitch);
         format_signed_int(roll, sizeof(roll), data->angle.roll);
         snprintf(imu_str, sizeof(imu_str), "P:%s R:%s  T:%dC",
@@ -184,10 +184,10 @@ void UI_DrawIMU(SmartWatchData_t *data) {
         OLED_DrawString6x8(4, 5, "PB10/PB11  I2C2");
         OLED_DrawString6x8(4, 6, "Auto-retry every 5s");
     } else {
-        char buf[24];
-        char ax[8], ay[8], az[8];
-        char gx[8], gy[8], gz[8];
-        char pitch[8], roll[8];
+        char buf[48];
+        char ax[16], ay[16], az[16];
+        char gx[16], gy[16], gz[16];
+        char pitch[16], roll[16];
 
         format_signed_fixed1(ax, sizeof(ax), data->accel.ax);
         format_signed_fixed1(ay, sizeof(ay), data->accel.ay);

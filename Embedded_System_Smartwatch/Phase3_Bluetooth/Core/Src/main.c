@@ -126,7 +126,7 @@ int main(void)
   watch_data.bt_connected = 0;
 
   /* Start TIM2 for 1Hz RTC tick */
-  HAL_TIM_Base_Start_IT(&htim2);
+  MX_TIM2_Start();
 
   /* Show initial page */
   UI_DrawPage(current_page, &watch_data);
