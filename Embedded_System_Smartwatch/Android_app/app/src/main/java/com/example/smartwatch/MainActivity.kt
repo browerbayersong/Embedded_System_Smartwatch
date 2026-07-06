@@ -383,29 +383,49 @@ fun ConnectionPage(
     permissionState: Boolean,
     context: Context
 ) {
-    /* --- Persisted saved devices: MAC|name stored in SharedPreferences --- */
-    val savedDevicesPrefs = remember { mutableStateListOf<String>() }
-    val savedDevicesNames = remember { mutableStateMapOf<String, String>() }
+    /* --- Persisted saved devices: entries stored as "MAC|name" in SharedPreferences --- */
+    val savedDevices = remember { mutableStateListOf<String>() }
 
     LaunchedEffect(Unit) {
         val prefs = context.getSharedPreferences("smartwatch_paired", Context.MODE_PRIVATE)
-        val set = prefs.getStringSet("saved_macs", emptySet())
-        val nameMap = prefs.getStringSet("saved_names", emptySet())
-        savedDevicesPrefs.addAll(set)
-        nameMap?.forEach { entry ->
-            val parts = entry.split("|", limit = 2)
-            if (parts.size == 2) savedDevicesNames[parts[0]] = parts[1]
-        }
+        val set = prefs.getStringSet("saved_devices", null)
+        if (set != null) savedDevices.addAll(set)
     }
 
     fun persistSaved() {
         val prefs = context.getSharedPreferences("smartwatch_paired", Context.MODE_PRIVATE)
         val edit = prefs.edit()
-        edit.putStringSet("saved_macs", savedDevicesPrefs.toSet())
-        val nameEntries = mutableSetOf<String>()
-        savedDevicesNames.forEach { (k, v) -> nameEntries.add("$k|$v") }
-        edit.putStringSet("saved_names", nameEntries)
+        edit.putStringSet("saved_devices", savedDevices.toSet())
         edit.apply()
+    }
+
+    fun deviceMacOf(entry: String): String {
+        val idx = entry.indexOf('|')
+        return if (idx >= 0) entry.substring(0, idx) else entry
+    }
+
+    fun deviceNameOf(entry: String): String {
+        val idx = entry.indexOf('|')
+        return if (idx >= 0) entry.substring(idx + 1) else entry
+    }
+
+    fun addSavedDevice(device: BluetoothDevice) {
+        val mac = device.address
+        if (savedDevices.none { deviceMacOf(it) == mac }) {
+            savedDevices.add("$mac|${device.name ?: "未知设备"}")
+            persistSaved()
+        }
+    }
+
+    fun removeSavedDeviceByMac(mac: String) {
+        val it = savedDevices.iterator()
+        while (it.hasNext()) {
+            if (deviceMacOf(it.next()) == mac) {
+                it.remove()
+                break
+            }
+        }
+        persistSaved()
     }
 
     Column(
@@ -460,14 +480,20 @@ fun ConnectionPage(
         // 已保存设备 (持久化)
         DeviceSectionStrings(
             title = "已保存设备",
-            items = savedDevicesPrefs,
-            nameForAddress = { addr -> savedDevicesNames[addr] ?: addr },
+            items = savedDevices,
+            nameForAddress = { entry ->
+                val idx = entry.indexOf('|')
+                if (idx >= 0) entry.substring(idx + 1) else entry
+            },
+            macOfEntry = { entry ->
+                val idx = entry.indexOf('|')
+                if (idx >= 0) entry.substring(0, idx) else entry
+            },
             actionText = "删除"
-        ) { addr ->
-            savedDevicesPrefs.remove(addr)
-            savedDevicesNames.remove(addr)
+        ) { entry ->
+            savedDevices.remove(entry)
             persistSaved()
-            logLines.add("已删除保存的设备 $addr")
+            logLines.add("已删除保存的设备 $entry")
         }
 
         // 扫描到的 (高度增加, 留出更多空间)
@@ -479,11 +505,7 @@ fun ConnectionPage(
                         logLines.add(status)
                         if (status.contains("成功") || status.contains("已连接")) {
                             connectedDevice.value = device
-                            if (!savedDevicesPrefs.contains(device.address)) {
-                                savedDevicesPrefs.add(device.address)
-                                savedDevicesNames[device.address] = device.name ?: "未知设备"
-                                persistSaved()
-                            }
+                            addSavedDevice(device)
                         }
                     },
                     onRawData = { raw ->
@@ -562,13 +584,14 @@ fun DeviceSection(
     }
 }
 
-/* Saved devices: stored by MAC address + name, uses click-to-delete */
+/* Saved devices: stored as "MAC|name" entries, uses click-to-delete */
 @Composable
 fun DeviceSectionStrings(
     title: String,
     items: SnapshotStateList<String>,
     height: Int = 160,
     nameForAddress: (String) -> String = { it },
+    macOfEntry: (String) -> String = { it },
     actionText: String = "删除",
     onAction: (String) -> Unit
 ) {
@@ -588,7 +611,7 @@ fun DeviceSectionStrings(
                 Text("(无)", color = Color.Gray, fontSize = 12.sp)
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    items(items) { addr ->
+                    items(items) { entry ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -596,11 +619,11 @@ fun DeviceSectionStrings(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${nameForAddress(addr)} ($addr)",
+                                text = "${nameForAddress(entry)} (${macOfEntry(entry)})",
                                 modifier = Modifier.weight(1f),
                                 fontSize = 13.sp
                             )
-                            TextButton(onClick = { onAction(addr) }) {
+                            TextButton(onClick = { onAction(entry) }) {
                                 Text(actionText, fontSize = 13.sp)
                             }
                         }

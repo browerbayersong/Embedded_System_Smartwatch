@@ -97,7 +97,7 @@ object BtProtocol {
         frame[0] = STX
         frame[1] = CMD_TIME_SYNC
         frame[2] = payload.size.toByte()
-        System.arraycopy(payload, 0, frame[3], payload.size)
+        System.arraycopy(payload, 0, frame, 3, payload.size)
         frame[3 + payload.size] = calcChecksum(CMD_TIME_SYNC, payload.size, payload)
         frame[4 + payload.size] = ETX
         return frame
