@@ -455,20 +455,24 @@ void OLED_DrawString8x16(uint8_t x, uint8_t page, const char *str) {
 /* ==================== Large Number (16x24) Rendering ==================== */
 
 /* Render a 16x24 glyph at page-aligned position. x = column pixel,
- * start_page = page index (0..7). Glyph layout matches SSD1306:
- * glyph[0..15]  → page 0 (top 8 rows), bit 0 = top pixel of the page
- * glyph[16..31] → page 1 (middle 8 rows)
- * glyph[32..47] → page 2 (bottom 8 rows)
- * This matches Font8x16 layout exactly.
+ * start_page = page index (0..7).
+ * Glyph memory layout (48 bytes):
+ *   glyph[0..15]  → BOTTOM 8 rows of the character
+ *   glyph[16..31] → MIDDLE 8 rows
+ *   glyph[32..47] → TOP 8 rows
+ * Each byte: bit 0 = top pixel of its 8-row page (SSD1306 native).
+ * We must reverse the page order when copying to framebuffer.
  */
 static void _DrawGlyph16x24(uint8_t x, uint8_t start_page, const uint8_t *glyph) {
-    if (start_page + 2 >= SSD1306_PAGES) return;  /* need 3 consecutive pages */
+    if (start_page + 2 >= SSD1306_PAGES) return;
     if (x + 16 > SSD1306_WIDTH) return;
 
+    /* glyph[page*16..] stores bottom-to-top; copy top-to-bottom. */
     for (uint8_t page = 0; page < 3; page++) {
+        uint8_t glyph_page = 2 - page;  /* reverse: glyph[2] → top, glyph[0] → bottom */
         for (uint8_t col = 0; col < 16; col++) {
             OLED_Buffer[x + col + (start_page + page) * SSD1306_WIDTH] =
-                glyph[page * 16 + col];
+                glyph[glyph_page * 16 + col];
         }
     }
 }

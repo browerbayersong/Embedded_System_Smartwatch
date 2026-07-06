@@ -225,7 +225,8 @@ fun AppScaffold(
                     sensorText = sensorText,
                     deviceTimeText = deviceTimeText,
                     connectedDevice = connectedDevice,
-                    permissionState = permissionState
+                    permissionState = permissionState,
+                    context = context
                 )
                 2 -> SettingsPage(
                     logLines = logLines,
@@ -379,9 +380,33 @@ fun ConnectionPage(
     sensorText: androidx.compose.runtime.MutableState<String>,
     deviceTimeText: androidx.compose.runtime.MutableState<String>,
     connectedDevice: androidx.compose.runtime.MutableState<BluetoothDevice?>,
-    permissionState: Boolean
+    permissionState: Boolean,
+    context: Context
 ) {
-    val savedDevices = remember { mutableStateListOf<String>() }
+    /* --- Persisted saved devices: MAC|name stored in SharedPreferences --- */
+    val savedDevicesPrefs = remember { mutableStateListOf<String>() }
+    val savedDevicesNames = remember { mutableStateMapOf<String, String>() }
+
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("smartwatch_paired", Context.MODE_PRIVATE)
+        val set = prefs.getStringSet("saved_macs", emptySet())
+        val nameMap = prefs.getStringSet("saved_names", emptySet())
+        savedDevicesPrefs.addAll(set)
+        nameMap?.forEach { entry ->
+            val parts = entry.split("|", limit = 2)
+            if (parts.size == 2) savedDevicesNames[parts[0]] = parts[1]
+        }
+    }
+
+    fun persistSaved() {
+        val prefs = context.getSharedPreferences("smartwatch_paired", Context.MODE_PRIVATE)
+        val edit = prefs.edit()
+        edit.putStringSet("saved_macs", savedDevicesPrefs.toSet())
+        val nameEntries = mutableSetOf<String>()
+        savedDevicesNames.forEach { (k, v) -> nameEntries.add("$k|$v") }
+        edit.putStringSet("saved_names", nameEntries)
+        edit.apply()
+    }
 
     Column(
         modifier = Modifier
@@ -423,7 +448,7 @@ fun ConnectionPage(
         }
 
         // 已连接
-        DeviceSection("已连接设备", listOfNotNull(connectedDevice.value)) { device ->
+        DeviceSection("已连接设备", listOfNotNull(connectedDevice.value), height = 140) { device ->
             OutlinedButton(onClick = {
                 bleManager.disconnect()
                 connectedDevice.value = null
@@ -432,11 +457,21 @@ fun ConnectionPage(
             }) { Text("断开") }
         }
 
-        // 已保存（用 MAC 地址列表模拟）
-        DeviceSection("已保存设备", emptyList()) { _ -> /* 暂无 */ }
+        // 已保存设备 (持久化)
+        DeviceSectionStrings(
+            title = "已保存设备",
+            items = savedDevicesPrefs,
+            nameForAddress = { addr -> savedDevicesNames[addr] ?: addr },
+            actionText = "删除"
+        ) { addr ->
+            savedDevicesPrefs.remove(addr)
+            savedDevicesNames.remove(addr)
+            persistSaved()
+            logLines.add("已删除保存的设备 $addr")
+        }
 
-        // 扫描到的
-        DeviceSection("扫描到的设备", deviceList) { device ->
+        // 扫描到的 (高度增加, 留出更多空间)
+        DeviceSection("扫描到的设备", deviceList, height = 260) { device ->
             TextButton(onClick = {
                 bleManager.connect(device,
                     onConnectionStatus = { status ->
@@ -444,8 +479,10 @@ fun ConnectionPage(
                         logLines.add(status)
                         if (status.contains("成功") || status.contains("已连接")) {
                             connectedDevice.value = device
-                            if (!savedDevices.contains(device.address)) {
-                                savedDevices.add(device.address)
+                            if (!savedDevicesPrefs.contains(device.address)) {
+                                savedDevicesPrefs.add(device.address)
+                                savedDevicesNames[device.address] = device.name ?: "未知设备"
+                                persistSaved()
                             }
                         }
                     },
@@ -457,10 +494,15 @@ fun ConnectionPage(
                                 sensorText.value = "ax=${parsed.ax.format(2)}, ay=${parsed.ay.format(2)}, az=${parsed.az.format(2)}\n" +
                                     "gx=${parsed.gx.format(2)}, gy=${parsed.gy.format(2)}, gz=${parsed.gz.format(2)}"
                             }
-                            is BtProtocol.ParsedFrame.TimeSyncResponse -> {
-                                val t = raw.joinToString(" ") { String.format("%02X", it) }
-                                deviceTimeText.value = t
+                            is BtProtocol.ParsedFrame.DeviceStatus -> {
+                                deviceTimeText.value = String.format(
+                                    "%04d-%02d-%02d %02d:%02d:%02d  步数:%d  距离:%.1fm  热量:%.1fkcal",
+                                    parsed.year, parsed.month, parsed.day,
+                                    parsed.hour, parsed.minute, parsed.second,
+                                    parsed.steps, parsed.distance, parsed.calories
+                                )
                             }
+                            is BtProtocol.ParsedFrame.TimeSyncResponse -> { /* ignore */ }
                             is BtProtocol.ParsedFrame.Invalid -> {
                                 logLines.add("解析失败: ${parsed.reason}")
                             }
@@ -480,12 +522,13 @@ fun ConnectionPage(
 fun DeviceSection(
     title: String,
     devices: List<BluetoothDevice>,
+    height: Int = 160,
     actionContent: @Composable (BluetoothDevice) -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(160.dp),
+            .height(height.dp),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -511,6 +554,55 @@ fun DeviceSection(
                                 fontSize = 13.sp
                             )
                             actionContent(device)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* Saved devices: stored by MAC address + name, uses click-to-delete */
+@Composable
+fun DeviceSectionStrings(
+    title: String,
+    items: SnapshotStateList<String>,
+    height: Int = 160,
+    nameForAddress: (String) -> String = { it },
+    actionText: String = "删除",
+    onAction: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(10.dp).fillMaxSize()) {
+            Text(text = title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+            if (items.isEmpty()) {
+                Text("(无)", color = Color.Gray, fontSize = 12.sp)
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(items) { addr ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${nameForAddress(addr)} ($addr)",
+                                modifier = Modifier.weight(1f),
+                                fontSize = 13.sp
+                            )
+                            TextButton(onClick = { onAction(addr) }) {
+                                Text(actionText, fontSize = 13.sp)
+                            }
                         }
                     }
                 }

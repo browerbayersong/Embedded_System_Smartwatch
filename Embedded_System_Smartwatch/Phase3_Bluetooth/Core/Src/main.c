@@ -182,6 +182,7 @@ int main(void)
                 /* Send sensor data via Bluetooth every 1s */
                 if (now - last_bt_tick >= 1000) {
                     BT_SendSensorData(&watch_data);
+                    BT_SendDeviceStatus(&watch_data);
                     last_bt_tick = now;
                 }
 
@@ -193,6 +194,12 @@ int main(void)
                     watch_data.imu_status = 1;
                 }
                 last_retry_tick = now;
+            }
+
+            /* When IMU unavailable, still send device status every 1s */
+            if (now - last_bt_tick >= 1000) {
+                BT_SendDeviceStatus(&watch_data);
+                last_bt_tick = now;
             }
         }
     }

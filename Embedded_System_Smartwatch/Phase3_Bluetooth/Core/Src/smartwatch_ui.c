@@ -136,23 +136,27 @@ void UI_DrawWatchFace(SmartWatchData_t *data) {
 
     UI_DrawStatusBar(data);
 
-    /* Large time HH:MM at pages 1-3 (y=8..31), centered horizontally.
-     * 16x24 font = 3 pages. 5 digits × 16 cols + 4 gaps × 2 = 88px wide.
-     * y=8 is page-aligned.
+    /* Time HH:MM using 8x16 font (verified correct, 2 pages tall).
+     * 5 chars × (8+2 spacing) = 50px wide, centered horizontally.
+     * y=1 (page 1) → occupies pages 1-2, avoiding status bar.
      */
-    uint8_t time_x = (SSD1306_WIDTH - 88) / 2;
-    OLED_DrawTime16x24(time_x, 8, data->hour, data->minute);
+    uint8_t time_x = (SSD1306_WIDTH - 50) / 2;
+    OLED_DrawChar8x16(time_x,       1, '0' + data->hour / 10);
+    OLED_DrawChar8x16(time_x + 10,  1, '0' + data->hour % 10);
+    OLED_DrawChar8x16(time_x + 20,  1, ':');
+    OLED_DrawChar8x16(time_x + 30,  1, '0' + data->minute / 10);
+    OLED_DrawChar8x16(time_x + 40,  1, '0' + data->minute % 10);
 
-    /* Date line at page 4 (y=32..39): "2026-07-06 Mon" */
+    /* Date line at page 3 (y=24..31): "2026-07-06 Mon" */
     char date_str[24];
     snprintf(date_str, sizeof(date_str), "%04d-%02d-%02d %s",
              data->year, data->month, data->day,
              weekdays_en[data->weekday]);
     uint8_t date_len = strlen(date_str);
     uint8_t date_x = (SSD1306_WIDTH - date_len * 6) / 2;
-    OLED_DrawString6x8(date_x, 4, date_str);
+    OLED_DrawString6x8(date_x, 3, date_str);
 
-    /* IMU / temperature at page 5 (y=40..47) */
+    /* Temperature + steps at page 5 (y=40..47) */
     char info_str[24];
     if (data->imu_status) {
         snprintf(info_str, sizeof(info_str), "T:%d C  steps:%d",
@@ -250,7 +254,7 @@ void UI_DrawBluetooth(SmartWatchData_t *data) {
     for (uint8_t x = 0; x < SSD1306_WIDTH; x++)
         OLED_SetPixel(x, 24, 1);
 
-    OLED_DrawString6x8(4, 3, "HC-05 USART2 38400");
+    OLED_DrawString6x8(4, 3, "HC-05 USART2 115200");
     OLED_DrawString6x8(4, 4, "TX: PA2  RX: PA3");
 
     if (data->bt_connected) {

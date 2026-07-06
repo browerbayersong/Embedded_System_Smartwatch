@@ -19,6 +19,7 @@
 #define BT_CMD_SENSOR_DATA  0x01
 #define BT_CMD_TIME_SYNC    0x02
 #define BT_CMD_ACK          0x03
+#define BT_CMD_DEVICE_STATUS 0x04
 
 /* Time sync data structure */
 typedef struct {
@@ -33,6 +34,7 @@ typedef struct {
 
 void BT_Init(void);
 void BT_SendSensorData(SmartWatchData_t *data);
+void BT_SendDeviceStatus(SmartWatchData_t *data);
 uint8_t BT_Process(SmartWatchData_t *data);
 uint8_t BT_GetTimeSync(BT_TimeSync_t *ts);
 void BT_RxCpltCallback(uint16_t size);

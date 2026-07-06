@@ -175,6 +175,58 @@ void BT_SendSensorData(SmartWatchData_t *data)
     HAL_UART_Transmit_DMA(&huart2, tx_buf, 5 + len);
 }
 
+/* Send device status (time + activity) frame via BT */
+void BT_SendDeviceStatus(SmartWatchData_t *data)
+{
+    /* Payload:
+       byte 0  : hour
+       byte 1  : minute
+       byte 2  : second
+       byte 3  : year high
+       byte 4  : year low
+       byte 5  : month
+       byte 6  : day
+       byte 7  : weekday
+       byte 8..11  : step_count (uint32_t, little-endian)
+       byte 12..15 : distance_m (float, little-endian)
+       byte 16..19 : calories (float, little-endian)
+    */
+    uint8_t len = 20;
+    uint8_t buf[256];
+    buf[0] = BT_STX;
+    buf[1] = BT_CMD_DEVICE_STATUS;
+    buf[2] = len;
+
+    uint8_t *p = &buf[3];
+    p[0] = (uint8_t)data->hour;
+    p[1] = (uint8_t)data->minute;
+    p[2] = (uint8_t)data->second;
+    uint16_t yr = (uint16_t)data->year;
+    p[3] = (uint8_t)(yr >> 8);
+    p[4] = (uint8_t)(yr & 0xFF);
+    p[5] = (uint8_t)data->month;
+    p[6] = (uint8_t)data->day;
+    p[7] = (uint8_t)data->weekday;
+    uint32_t sc = data->step_count;
+    p[8]  = (uint8_t)(sc & 0xFF);
+    p[9]  = (uint8_t)((sc >> 8) & 0xFF);
+    p[10] = (uint8_t)((sc >> 16) & 0xFF);
+    p[11] = (uint8_t)((sc >> 24) & 0xFF);
+    memcpy(&p[12], &data->distance_m, 4);
+    memcpy(&p[16], &data->calories, 4);
+
+    /* Checksum */
+    uint8_t chk = buf[1] ^ buf[2];
+    for (uint8_t i = 0; i < len; i++)
+    {
+        chk ^= buf[3 + i];
+    }
+    buf[3 + len] = chk;
+    buf[4 + len] = BT_ETX;
+
+    HAL_UART_Transmit_DMA(&huart2, buf, 5 + len);
+}
+
 /* Check and apply time sync from phone */
 uint8_t BT_GetTimeSync(BT_TimeSync_t *ts)
 {
