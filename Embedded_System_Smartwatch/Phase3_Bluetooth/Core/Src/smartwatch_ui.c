@@ -136,35 +136,34 @@ void UI_DrawWatchFace(SmartWatchData_t *data) {
 
     UI_DrawStatusBar(data);
 
-    /* Large time display - y=16 is page-aligned (bit_shift=0),
-       avoiding the non-aligned rendering bug in OLED_DrawDigit16x24.
-       24px tall font occupies pages 2-4 (y=16..39). */
-    uint8_t time_x = (128 - 88) / 2;
-    OLED_DrawTime16x24(time_x, 16, data->hour, data->minute);
+    /* Large time HH:MM at pages 1-3 (y=8..31), centered horizontally.
+     * 16x24 font = 3 pages. 5 digits × 16 cols + 4 gaps × 2 = 88px wide.
+     * y=8 is page-aligned.
+     */
+    uint8_t time_x = (SSD1306_WIDTH - 88) / 2;
+    OLED_DrawTime16x24(time_x, 8, data->hour, data->minute);
 
-    /* Date line: page 5 */
-    char date_str[32];
+    /* Date line at page 4 (y=32..39): "2026-07-06 Mon" */
+    char date_str[24];
     snprintf(date_str, sizeof(date_str), "%04d-%02d-%02d %s",
              data->year, data->month, data->day,
              weekdays_en[data->weekday]);
     uint8_t date_len = strlen(date_str);
-    uint8_t date_x = (128 - date_len * 6) / 2;
-    OLED_DrawString6x8(date_x, 5, date_str);
+    uint8_t date_x = (SSD1306_WIDTH - date_len * 6) / 2;
+    OLED_DrawString6x8(date_x, 4, date_str);
 
-    /* IMU quick status: page 6 */
-    char imu_str[32];
+    /* IMU / temperature at page 5 (y=40..47) */
+    char info_str[24];
     if (data->imu_status) {
-        char pitch[16], roll[16];
-        format_signed_int(pitch, sizeof(pitch), data->angle.pitch);
-        format_signed_int(roll, sizeof(roll), data->angle.roll);
-        snprintf(imu_str, sizeof(imu_str), "P:%s R:%s  T:%dC",
-                 pitch, roll, data->temp_celsius);
+        snprintf(info_str, sizeof(info_str), "T:%d C  steps:%d",
+                 data->temp_celsius, data->step_count);
     } else {
-        snprintf(imu_str, sizeof(imu_str), "MPU6050: --");
+        snprintf(info_str, sizeof(info_str), "T:-- C  steps:%d",
+                 data->step_count);
     }
-    uint8_t imu_len = strlen(imu_str);
-    uint8_t imu_x = (128 - imu_len * 6) / 2;
-    OLED_DrawString6x8(imu_x, 6, imu_str);
+    uint8_t info_len = strlen(info_str);
+    uint8_t info_x = (SSD1306_WIDTH - info_len * 6) / 2;
+    OLED_DrawString6x8(info_x, 5, info_str);
 
     UI_DrawPageIndicator(PAGE_WATCH_FACE, PAGE_MAX);
 }

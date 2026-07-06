@@ -454,71 +454,36 @@ void OLED_DrawString8x16(uint8_t x, uint8_t page, const char *str) {
 
 /* ==================== Large Number (16x24) Rendering ==================== */
 
-/* Reverse 8 bits: b7 b6 ... b0 → b0 b1 ... b7 */
-static uint8_t _reverse_bits(uint8_t x) {
-    x = ((x & 0xAA) >> 1) | ((x & 0x55) << 1);
-    x = ((x & 0xCC) >> 2) | ((x & 0x33) << 2);
-    x = ((x & 0xF0) >> 4) | ((x & 0x0F) << 4);
-    return x;
+/* Render a 16x24 glyph at page-aligned position. x = column pixel,
+ * start_page = page index (0..7). Glyph layout matches SSD1306:
+ * glyph[0..15]  → page 0 (top 8 rows), bit 0 = top pixel of the page
+ * glyph[16..31] → page 1 (middle 8 rows)
+ * glyph[32..47] → page 2 (bottom 8 rows)
+ * This matches Font8x16 layout exactly.
+ */
+static void _DrawGlyph16x24(uint8_t x, uint8_t start_page, const uint8_t *glyph) {
+    if (start_page + 2 >= SSD1306_PAGES) return;  /* need 3 consecutive pages */
+    if (x + 16 > SSD1306_WIDTH) return;
+
+    for (uint8_t page = 0; page < 3; page++) {
+        for (uint8_t col = 0; col < 16; col++) {
+            OLED_Buffer[x + col + (start_page + page) * SSD1306_WIDTH] =
+                glyph[page * 16 + col];
+        }
+    }
 }
 
 void OLED_DrawDigit16x24(uint8_t x, uint8_t y, uint8_t digit) {
     if (digit > 9) return;
-    if (x + 16 > SSD1306_WIDTH || y + 24 > SSD1306_HEIGHT) return;
+    if (y + 24 > SSD1306_HEIGHT) return;
 
-    const uint8_t *glyph = Font16x24[digit];
-    uint8_t start_page = y / 8;
-
-    /* Font16x24 stores: glyph[0..15] = bottom 8 rows,
-     *                   glyph[32..47] = top 8 rows.
-     * Also each byte uses bit 0 = bottom pixel, but
-     * SSD1306 expects bit 0 = top pixel.
-     * Fix: reverse page order and reverse bits of each byte.
-     */
-    for (uint8_t page = 0; page < 3; page++) {
-        if (start_page + page >= SSD1306_PAGES) break;
-        uint8_t glyph_page = 2 - page; /* glyph top → buffer first target page */
-        for (uint8_t col = 0; col < 16; col++) {
-            uint8_t offset = x + col + (start_page + page) * SSD1306_WIDTH;
-            if (offset < sizeof(OLED_Buffer)) {
-                uint8_t data = _reverse_bits(glyph[glyph_page * 16 + col]);
-                uint8_t bit_shift = y & 7;
-                if (bit_shift) {
-                    OLED_Buffer[offset] |= (data << bit_shift);
-                    if (offset + SSD1306_WIDTH < sizeof(OLED_Buffer))
-                        OLED_Buffer[offset + SSD1306_WIDTH] |= (data >> (8 - bit_shift));
-                } else {
-                    OLED_Buffer[offset] = data;
-                }
-            }
-        }
-    }
+    _DrawGlyph16x24(x, y / 8, Font16x24[digit]);
 }
 
 void OLED_DrawColon16x24(uint8_t x, uint8_t y) {
-    if (x + 16 > SSD1306_WIDTH || y + 24 > SSD1306_HEIGHT) return;
+    if (y + 24 > SSD1306_HEIGHT) return;
 
-    const uint8_t *glyph = Font16x24[10]; /* colon */
-    uint8_t start_page = y / 8;
-
-    for (uint8_t page = 0; page < 3; page++) {
-        if (start_page + page >= SSD1306_PAGES) break;
-        uint8_t glyph_page = 2 - page;
-        for (uint8_t col = 0; col < 16; col++) {
-            uint8_t offset = x + col + (start_page + page) * SSD1306_WIDTH;
-            if (offset < sizeof(OLED_Buffer)) {
-                uint8_t data = _reverse_bits(glyph[glyph_page * 16 + col]);
-                uint8_t bit_shift = y & 7;
-                if (bit_shift) {
-                    OLED_Buffer[offset] |= (data << bit_shift);
-                    if (offset + SSD1306_WIDTH < sizeof(OLED_Buffer))
-                        OLED_Buffer[offset + SSD1306_WIDTH] |= (data >> (8 - bit_shift));
-                } else {
-                    OLED_Buffer[offset] = data;
-                }
-            }
-        }
-    }
+    _DrawGlyph16x24(x, y / 8, Font16x24[10]);
 }
 
 void OLED_DrawTime16x24(uint8_t x, uint8_t y, uint8_t hour, uint8_t minute) {
