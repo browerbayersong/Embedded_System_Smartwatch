@@ -311,6 +311,27 @@ void TIM2_IRQHandler(void)
               rtc_time.hour++;
               if (rtc_time.hour >= 24) {
                   rtc_time.hour = 0;
+                  rtc_time.weekday = (rtc_time.weekday + 1) % 7;
+                  rtc_time.day++;
+                  uint8_t days_in_month;
+                  switch (rtc_time.month) {
+                      case 4: case 6: case 9: case 11:
+                          days_in_month = 30; break;
+                      case 2:
+                          /* simplified leap year check */
+                          days_in_month = ((rtc_time.year % 4 == 0 && rtc_time.year % 100 != 0) || (rtc_time.year % 400 == 0)) ? 29 : 28;
+                          break;
+                      default:
+                          days_in_month = 31; break;
+                  }
+                  if (rtc_time.day > days_in_month) {
+                      rtc_time.day = 1;
+                      rtc_time.month++;
+                      if (rtc_time.month > 12) {
+                          rtc_time.month = 1;
+                          rtc_time.year++;
+                      }
+                  }
               }
           }
       }

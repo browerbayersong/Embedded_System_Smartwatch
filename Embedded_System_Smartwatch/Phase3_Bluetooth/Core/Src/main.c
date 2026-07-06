@@ -150,6 +150,10 @@ int main(void)
     watch_data.hour = rtc_time.hour;
     watch_data.minute = rtc_time.min;
     watch_data.second = rtc_time.sec;
+    watch_data.year = rtc_time.year;
+    watch_data.month = rtc_time.month;
+    watch_data.day = rtc_time.day;
+    watch_data.weekday = rtc_time.weekday;
 
     /* 2) MPU6050 传感器读取 + 计步（每 200ms 一次） */
     {
@@ -179,9 +183,8 @@ int main(void)
                     }
                 }
 
-                /* Send sensor data via Bluetooth every 1s */
+                /* Send device status via Bluetooth every 1s (merged: time + activity) */
                 if (now - last_bt_tick >= 1000) {
-                    BT_SendSensorData(&watch_data);
                     BT_SendDeviceStatus(&watch_data);
                     last_bt_tick = now;
                 }
@@ -210,6 +213,9 @@ int main(void)
         rtc_time.hour = watch_data.hour;
         rtc_time.min = watch_data.minute;
         rtc_time.sec = watch_data.second;
+        rtc_time.year = watch_data.year;
+        rtc_time.month = watch_data.month;
+        rtc_time.day = watch_data.day;
     }
 
     /* 4) 读取 HC-05 STATE 引脚 */
