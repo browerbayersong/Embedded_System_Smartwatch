@@ -1,0 +1,67 @@
+% !TeX program = xelatex
+% 嵌入式系统课程设计报告 - 智能手表
+
+\documentclass[12pt, a4paper]{ctexart}
+\usepackage{GDUTReport}
+
+% 页面布局设置
+\setstretch{1.5} % 设置全局行距为1.5倍
+
+% 字体设置
+\setmainfont{Times New Roman} % 英文正文为Times New Roman
+
+% 封面内容
+{
+    % 课程名称
+    \title{嵌入式系统课程设计报告}
+    % 报告标题
+    \subtitle{基于STM32F103C8T6的智能手表设计}
+    % 姓名
+    \name{宋柏粤}
+    % 学号
+    \thenumber{3124009652}
+    % 专业
+    \major{微电子科学与工程}
+    % 班级
+    \class{微电子4班}
+    % 队名
+    \team{666666}
+    % 队友名字
+    \teammate{方旭亮 陈斯焕}
+    % 指导老师
+    \teacher{周贤中}
+}
+
+\begin{document}
+
+% 封面
+\pagenumbering{gobble}
+\makecover
+
+% 摘要
+\newpage
+\begin{abstract}
+本文介绍了嵌入式系统课程设计项目——基于STM32F103C8T6的智能手表系统设计。利用C语言进行嵌入式软件开发，设计并实现了包含OLED显示驱动、MPU6050六轴运动传感器数据采集、HC-05蓝牙通信协议、基于加速度向量幅值的计步器算法、以及Android手机APP上位机等核心功能的系统。在Keil MDK或STM32CubeIDE开发环境下完成固件设计，通过STM32F103C8T6最小系统板驱动，并在实际搭建的智能手表原型硬件平台上完成功能验证与性能测试。项目展示了STM32微控制器在可穿戴设备领域的综合应用价值和多模块协同开发能力。
+\par
+\textbf{关键词：} STM32F103C8T6；嵌入式系统；智能手表；OLED；MPU6050；HC-05蓝牙；计步器；Android上位机\end{abstract}
+\clearpage
+
+% 目录
+\tableofcontents
+\clearpage
+
+% 正文
+\pagenumbering{arabic}
+\setcounter{page}{1} % 让页码从正文开始编号
+
+\input{body/chapter1.tex}
+\input{body/chapter2.tex}
+\input{body/chapter3.tex}
+\input{body/chapter4.tex}
+\input{body/chapter5.tex}
+\input{body/chapter6.tex}
+\input{body/chapter7.tex}
+\input{body/chapter8.tex}
+
+
+\end{document}

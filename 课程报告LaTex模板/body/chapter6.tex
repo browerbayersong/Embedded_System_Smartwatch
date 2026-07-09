@@ -1,0 +1,202 @@
+% !Mode:: "TeX:UTF-8"
+
+\section{个人贡献}
+
+\subsection{报告撰写分工}
+负责项目报告的总体规划与撰写工作，各章分工如下：
+\begin{itemize}
+    \item 第1章（项目简介）：撰写项目背景、功能概述与技术方向说明
+    \item 第2章（项目设计目标）：撰写硬件/软件系统设计目标与预期成果
+    \item 第3章（项目设计与实现）：撰写硬件模块选型、软件架构、关键代码与技术实现细节
+    \item 第4章（功能展示）：撰写功能描述、演示结果、测试数据与分析
+    \item 第5章（物料与成本）：整理物料清单、统计成本分析与损耗记录
+    \item 第6章（个人贡献）：本节内容，总结个人在项目中的工作与收获
+    \item 第7章（项目成果与反思）：撰写项目评估、成功与不足、改进方向
+    \item 第8章（附录）：整理代码清单、参考文献与设计图纸说明
+\end{itemize}
+队友方旭亮负责部分硬件调试与测试数据的采集工作，队友陈斯焕负责Android APP的UI设计和测试工作。
+
+\subsection{编码工作}
+本项目代码开发分为STM32固件开发和Android APP开发两部分，个人主要负责：
+
+\subsubsection{STM32固件开发}
+使用Keil MDK / STM32CubeIDE开发环境，使用C语言完成：
+\begin{itemize}
+    \item \textbf{OLED显示驱动（oled.c / oled.h）：}
+    \begin{itemize}
+        \item SSD1306初始化命令序列编写（约20条配置命令）
+        \item 6$\times$8、8$\times$16、16$\times$24三种尺寸字模数组定义
+        \item OLED\_Show\_String、OLED\_Show\_Num、OLED\_Draw\_Big\_Clock等核心函数实现
+        \item 128$\times$64像素级绘图与点、线、矩形绘制函数
+    \end{itemize}
+    \item \textbf{MPU6050传感器驱动（mpu6050.c / mpu6050.h）：}
+    \begin{itemize}
+        \item MPU6050初始化：PWR\_MGMT\_1寄存器配置，量程设置（加速度$\pm$2g，陀螺仪$\pm$250°/s）
+        \item 六轴数据读取：通过I2C读取0x3B-0x48寄存器数据并组合为16位有符号整数
+        \item 物理量转换：16384.0 LSB/g、131.0 LSB/°/s转换系数实现
+        \item WHO\_AM\_I校验：读取0x75寄存器验证设备身份（预期值0x68）
+        \item 姿态角计算：atan2反正切函数实现Pitch/Roll角度
+    \end{itemize}
+    \item \textbf{蓝牙通信协议（bluetooth.c / bluetooth.h）：}
+    \begin{itemize}
+        \item 帧协议封装：Bluetooth\_Send\_Frame函数组装STX+CMD+DATA+CHK+ETX
+        \item 帧协议解析：Bluetooth\_Parse\_Frame函数搜索帧头并校验XOR
+        \item 三种命令类型处理：0x01传感器上报、0x02时间同步、0x03计步数据
+        \item float与uint8数组双向转换（memcpy实现IEEE 754格式传输）
+    \end{itemize}
+    \item \textbf{计步器算法（pedometer.c / pedometer.h）：}
+    \begin{itemize}
+        \item 加速度向量幅值计算：平方根函数实现三轴合成
+        \item 一阶低通滤波（指数加权平均）：平滑加速度数据
+        \item 动态阈值检测：滑动窗口内维护最大值/最小值
+        \item 200ms最小步间间隔防抖：时间戳比较实现
+        \item 距离与卡路里估算：基于步数乘以平均步长/单步卡路里
+    \end{itemize}
+    \item \textbf{智能手表UI框架（smartwatch\_ui.c / smartwatch\_ui.h）：}
+    \begin{itemize}
+        \item 5个页面渲染函数：UI\_Page\_Clock、UI\_Page\_Sensor、UI\_Page\_Bluetooth、UI\_Page\_Device、UI\_Page\_Activity
+        \item 页面索引管理与3秒自动切换逻辑
+        \item 格式化字符串拼接（sprintf实现浮点数格式化）
+    \end{itemize}
+    \item \textbf{软RTC时钟（soft\_rtc.c / soft\_rtc.h）：}
+    \begin{itemize}
+        \item TIM2 1Hz中断配置：72MHz预分频和自动重载寄存器计算
+        \item 时/分/秒/日/月/年变量维护与进位逻辑
+        \item 蓝牙时间同步命令（0x02）解析与RTC更新
+    \end{itemize}
+    \item \textbf{I2C总线恢复（i2c\_drv.c / i2c\_drv.h）：}
+    \begin{itemize}
+        \item GPIO模拟I2C时钟脉冲：SCL输出9个脉冲释放SDA
+        \item STOP信号生成：SCL/SDA状态机切换
+    \end{itemize}
+    \item \textbf{主循环与系统调度（main.c / stm32f1xx\_it.c）：}
+    \begin{itemize}
+        \item 系统初始化与外设启动顺序编排
+        \item 100ms主循环周期任务调度
+        \item TIM2中断服务函数与RTC时钟更新
+        \item USART2 DMA环形缓冲接收处理
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Android APP开发}
+使用Android Studio + Kotlin开发：
+\begin{itemize}
+    \item 主界面Activity设计（MainActivity.kt）：TabLayout+ViewPager2三页切换
+    \item 蓝牙管理器（BleManager.kt）：经典蓝牙SPP设备扫描、连接、数据收发
+    \item 帧协议解析（BtProtocol.kt）：与手表端匹配的0xAA/0x55帧格式解析
+    \item UI组件：传感器数值卡片、连接状态指示、日志列表
+    \item Material Design 3主题配置与颜色/字体设计
+\end{itemize}
+
+\subsubsection{代码量统计}
+\begin{itemize}
+    \item STM32固件：约2000行C代码（含驱动、算法、UI、主循环）
+    \item Android APP：约800行Kotlin代码（含Activity、蓝牙管理、协议解析）
+    \item 注释完整率：$>$35\%，关键函数均有功能说明和参数注释
+\end{itemize}
+
+\subsection{硬件连接}
+设计并搭建完整的智能手表硬件系统，具体工作包括：
+\begin{itemize}
+    \item \textbf{模块选型与验证：} 独立完成OLED、MPU6050、HC-05三个模块的功能测试与选型验证
+    \item \textbf{I2C总线连接：} PB6(PB10)/PB7(PB11)分别连接OLED和MPU6050的SCL/SDA引脚，实现两路I2C总线
+    \item \textbf{USART2串口连接：} PA2(TX)/PA3(RX)交叉连接HC-05模块的RX/TX引脚
+    \item \textbf{STATE引脚连接：} PB0配置为GPIO输入，检测HC-05连接状态
+    \item \textbf{电源系统设计：} 统一5V供电，经AMS1117-3.3V转换后为数字模块供电
+    \item \textbf{面包板电路搭建：} 使用约20根杜邦线完成全部连接，保持信号/地线分离
+    \item \textbf{硬件调试：} 使用万用表测量各模块工作电压，使用逻辑分析仪观察I2C通信波形
+\end{itemize}
+
+\subsection{资本投入}
+个人承担项目全部硬件物料采购费用，总计约84.20元（详见第5章），主要包括：
+\begin{itemize}
+    \item STM32F103C8T6核心板：15.50元
+    \item SSD1306 OLED显示模块：12.80元
+    \item MPU6050六轴传感器模块：8.50元
+    \item HC-05蓝牙模块：18.00元
+    \item 面包板、杜邦线、稳压模块、LED电阻等辅材：约30元
+    \item 开发工具（ST-Link下载器、USB数据线）为已有存量，不计入新增成本
+\end{itemize}
+
+\subsection{开发中遇到的问题及解决方案}
+
+\subsubsection{I2C从机死锁导致MPU6050无法通信}
+\begin{itemize}
+    \item \textbf{问题描述：} 热启动或复位后，MPU6050偶尔出现SDA引脚被拉低，I2C主机发起通信始终收不到ACK，OLED显示模块同样偶发此问题
+    \item \textbf{问题原因：} I2C从机在通信过程中被中断复位，可能处于时钟脉冲中间状态导致SDA被锁定
+    \item \textbf{解决方案：} 在系统初始化阶段执行I2C总线恢复（I2C\_Bus\_Recovery函数）：
+    \begin{itemize}
+        \item 重新配置SCL/SDA引脚为GPIO输出模式
+        \item 发送9个SCL时钟脉冲，强制从机释放SDA
+        \item 发送STOP信号，确保总线处于空闲状态
+        \item 重新配置SCL/SDA为I2C外设功能后再执行模块初始化
+    \end{itemize}
+    \item \textbf{效果：} 热启动100次测试中，I2C通信成功率从85\%提升至100\%
+\end{itemize}
+
+\subsubsection{HC-05波特率不匹配导致乱码}
+\begin{itemize}
+    \item \textbf{问题描述：} HC-05默认波特率38400，与固件中USART2配置的115200不匹配，手机端接收数据全部为乱码
+    \item \textbf{问题原因：} 首次使用HC-05模块，未注意波特率配置差异
+    \item \textbf{解决方案：} 使用AT指令重新配置HC-05：
+    \begin{itemize}
+        \item 将HC-05的KEY引脚接3.3V进入AT命令模式
+        \item 通过USB转串口发送命令：\verb|AT+UART=115200,0,0|（设置115200波特率，1停止位，无校验）
+        \item 发送\verb|AT+NAME=SmartWatch|设置设备名称（可选）
+        \item 断电重启后HC-05以新波特率工作，与固件USART2配置匹配
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{OLED字模显示不完整}
+\begin{itemize}
+    \item \textbf{问题描述：} 16$\times$24大字时钟显示时，部分数字下半部分缺失或重叠
+    \item \textbf{问题原因：} OLED按页寻址模式（每页8行），24像素高度需跨3页显示，页偏移计算错误
+    \item \textbf{解决方案：}
+    \begin{itemize}
+        \item 修正OLED\_Draw\_Big\_Clock函数中的页地址设置（page = y / 8）
+        \item 确保跨页显示时正确写入相邻页的GDDRAM
+        \item 添加字模数组边界检查，防止数组越界访问
+    \end{itemize}
+    \item \textbf{效果：} 所有尺寸字符显示完整，无裁剪或重叠现象
+\end{itemize}
+
+\subsubsection{计步器算法误触发严重}
+\begin{itemize}
+    \item \textbf{问题描述：} 手表静止或轻微晃动时，计步器偶发误计数，步行测试中误差率高达10\%
+    \item \textbf{问题原因：} 初期使用固定阈值（1.1g）检测峰值，未处理高频噪声和偶然冲击
+    \item \textbf{解决方案：} 多重改进计步器算法：
+    \begin{itemize}
+        \item 添加一阶低通滤波（$\alpha$=0.7），滤除高频振动噪声
+        \item 改用动态阈值：维护4秒滑动窗口内max/min，阈值=(max+min)/2+0.05g偏移
+        \item 增加200ms最小步间间隔防抖：HAL\_GetTick()时间戳比较
+        \item 增加步幅合理性检查：加速度峰值需在0.3g-3.0g之间
+    \end{itemize}
+    \item \textbf{效果：} 静态环境下1小时无错误计数，正常步行误差率降至2.5\%以下
+\end{itemize}
+
+\subsubsection{蓝牙接收缓冲区溢出导致丢帧}
+\begin{itemize}
+    \item \textbf{问题描述：} 手机端频繁发送数据时，手表端偶尔丢帧或数据错乱
+    \item \textbf{问题原因：} 原始实现使用查询式接收，未及时处理接收数据
+    \item \textbf{解决方案：} 改用DMA+空闲中断的环形缓冲方案：
+    \begin{itemize}
+        \item 配置USART2 DMA接收通道，缓冲区大小256字节
+        \item 启用USART IDLE中断，在一帧数据接收完成后触发处理
+        \item 使用write/read指针管理环形缓冲，避免数据覆盖
+        \item 主循环中以非阻塞方式从缓冲读取并解析帧数据
+    \end{itemize}
+    \item \textbf{效果：} 连续10分钟大数据量通信测试，丢帧率降至0.15\%，满足稳定通信需求
+\end{itemize}
+
+\subsubsection{MPU6050数据抖动影响姿态角显示}
+\begin{itemize}
+    \item \textbf{问题描述：} OLED显示的Pitch/Roll姿态角数值跳动频繁，即使静止状态也有±3°波动
+    \item \textbf{问题原因：} 原始传感器数据未做平滑处理，MEMS传感器固有噪声和机械振动导致数据波动
+    \item \textbf{解决方案：}
+    \begin{itemize}
+        \item 对加速度和陀螺仪数据添加一阶低通滤波（滑动平均，窗口大小8）
+        \item 使用互补滤波融合加速度和陀螺仪数据更新姿态角
+        \item 加速度权重取0.98，陀螺仪权重取0.02，抑制高频抖动
+    \end{itemize}
+    \item \textbf{效果：} 静止状态下姿态角波动降至±0.5°以内，动态响应基本无延迟
+\end{itemize}
